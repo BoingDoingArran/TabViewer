@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tab Viewer</title>
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --text: #e8e8e8;
+    --text-dim: #888;
+    --accent: #c8a84b;
+    --accent-dim: #8a7030;
+    --chord: #c8a84b;
+    --section: #4a9eff;
+    --danger: #e05555;
+    --mono: ui-monospace, 'Courier New', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  #title-display {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    flex: 1;
+    min-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #artist-display {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+    -webkit-user-select: none;
+  }
+  .btn:active { background: var(--border); }
+  .btn.accent {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn.accent:active { background: var(--accent); }
+
+  /* ── CONTROLS ROW ── */
+  #controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+
+  #transpose-val {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+    min-width: 28px;
+    text-align: center;
+  }
+
+  .small-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-user-select: none;
+  }
+  .small-btn:active { background: var(--border); }
+
+  #font-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    min-width: 28px;
+    text-align: center;
+  }
+
+  #scroll-speed {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  #scroll-speed::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  #scroll-btn {
+    min-width: 80px;
+  }
+  #scroll-btn.active {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+  }
+
+  /* ── LANDING ── */
+  #landing {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 40px 20px;
+  }
+
+  #landing h1 {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  #landing p {
+    font-size: 14px;
+    color: var(--text-dim);
+    text-align: center;
+    max-width: 300px;
+    line-height: 1.6;
+  }
+
+  #file-input {
+    display: none;
+  }
+
+  .open-label {
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .open-label:active { background: var(--accent); }
+
+  .hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  /* ── TAB VIEWER ── */
+  #viewer {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px 60px;
+    display: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #tab-content {
+    font-family: var(--mono);
+    font-size: 15px;
+    line-height: 1.9;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .tab-title {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .tab-artist {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+    font-weight: 300;
+  }
+
+  .tab-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 28px;
+    font-family: var(--sans);
+    letter-spacing: 0.05em;
+  }
+
+  .section-label {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--section);
+    border: 1px solid var(--section);
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin: 16px 0 8px;
+  }
+
+  .chord-row {
+    color: var(--chord);
+    font-weight: 600;
+    display: block;
+    white-space: pre;
+    line-height: 1.4;
+    min-height: 1.2em;
+  }
+
+  .lyric-row {
+    color: var(--text);
+    display: block;
+    white-space: pre-wrap;
+    line-height: 1.6;
+    margin-bottom: 2px;
+  }
+
+  .line-pair {
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .blank-line {
+    display: block;
+    height: 0.7em;
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div>
+    <div id="title-display">Tab Viewer</div>
+    <div id="artist-display"></div>
+  </div>
+  <label for="file-input" class="btn" id="open-btn">Open .cho</label>
+  <input type="file" id="file-input" accept=".cho,.txt" multiple>
+</div>
+
+<div id="controls" style="display:none">
+  <div class="control-group">
+    <span class="label">Key</span>
+    <button class="small-btn" id="transpose-down">♭</button>
+    <span id="transpose-val">0</span>
+    <button class="small-btn" id="transpose-up">♯</button>
+  </div>
+
+  <div class="control-group">
+    <span class="label">Size</span>
+    <button class="small-btn" id="font-down">−</button>
+    <span id="font-val">15</span>
+    <button class="small-btn" id="font-up">+</button>
+  </div>
+
+  <div class="control-group">
+    <span class="label">Speed</span>
+    <input type="range" id="scroll-speed" min="1" max="10" value="3">
+  </div>
+
+  <button class="btn" id="scroll-btn">▶ Scroll</button>
+</div>
+
+<div id="landing">
+  <h1>// tab viewer</h1>
+  <p>Open a ChordPro <code>.cho</code> file from your Files app</p>
+  <label for="file-input" class="open-label">Open File</label>
+  <p class="hint">
+    Supports ChordPro .cho files<br>
+    Transpose · Autoscroll · Font size
+  </p>
+</div>
+
+<div id="viewer">
+  <div id="tab-content"></div>
+</div>
+
+<script>
+// ── CHORD THEORY ──
+const SHARPS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const FLATS  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const ENHARMONIC = {
+  'C#':'Db','Db':'C#','D#':'Eb','Eb':'D#','F#':'Gb','Gb':'F#',
+  'G#':'Ab','Ab':'G#','A#':'Bb','Bb':'A#'
+};
+
+function noteIndex(note) {
+  let i = SHARPS.indexOf(note);
+  if (i === -1) i = FLATS.indexOf(note);
+  return i;
+}
+
+function transposeChord(chord, semitones) {
+  if (semitones === 0) return chord;
+  // Match root note (1-2 chars) + optional bass note after /
+  const match = chord.match(/^([A-G][b#]?)(.*)$/);
+  if (!match) return chord;
+  const root = match[1];
+  const rest = match[2];
+  const idx = noteIndex(root);
+  if (idx === -1) return chord;
+  const newIdx = ((idx + semitones) % 12 + 12) % 12;
+  // Prefer flats if original used flats
+  const useFlatScale = FLATS.includes(root) && !SHARPS.includes(root);
+  let newRoot = semitones < 0 || useFlatScale ? FLATS[newIdx] : SHARPS[newIdx];
+
+  // Handle bass note in slash chords
+  const bassMatch = rest.match(/^(.*\/)([A-G][b#]?)(.*)$/);
+  if (bassMatch) {
+    const bassIdx = noteIndex(bassMatch[2]);
+    if (bassIdx !== -1) {
+      const newBassIdx = ((bassIdx + semitones) % 12 + 12) % 12;
+      const newBass = semitones < 0 || useFlatScale ? FLATS[newBassIdx] : SHARPS[newBassIdx];
+      return newRoot + bassMatch[1] + newBass + bassMatch[3];
+    }
+  }
+  return newRoot + rest;
+}
+
+// ── STATE ──
+let rawContent = '';
+let transpose = 0;
+let fontSize = 15;
+let scrolling = false;
+let scrollInterval = null;
+let songTitle = '';
+let songArtist = '';
+let songKey = '';
+let songType = '';
+
+// ── PARSE CHORDPRO ──
+function parseChordPro(text) {
+  const lines = text.split('\n');
+  const result = { title:'', artist:'', key:'', type:'', lines:[] };
+
+  for (let line of lines) {
+    // Directives
+    const dir = line.match(/^\{(\w+):\s*(.*?)\s*\}$/);
+    if (dir) {
+      const key = dir[1].toLowerCase();
+      const val = dir[2];
+      if (key === 'title') result.title = val;
+      else if (key === 'artist') result.artist = val;
+      else if (key === 'key') result.key = val;
+      else if (key === 'meta' && val.startsWith('type ')) result.type = val.slice(5);
+      else if (key === 'comment' || key === 'c') result.lines.push({ type:'section', text: val });
+      continue;
+    }
+    // Section shorthand {comment: ...} already handled above
+    // Blank line
+    if (line.trim() === '') {
+      result.lines.push({ type:'blank' });
+      continue;
+    }
+    // Parse inline chords
+    const parts = [];
+    const regex = /\[([^\]]+)\]|([^\[]+)/g;
+    let m;
+    while ((m = regex.exec(line)) !== null) {
+      if (m[1] !== undefined) parts.push({ chord: m[1] });
+      else parts.push({ text: m[2] });
+    }
+    result.lines.push({ type:'lyric', parts });
+  }
+  return result;
+}
+
+function renderChordPro(text, semitones) {
+  const parsed = parseChordPro(text);
+  songTitle = parsed.title;
+  songArtist = parsed.artist;
+  songKey = parsed.key;
+  songType = parsed.type;
+
+  let html = '';
+
+  if (parsed.title) {
+    html += `<div class="tab-title">${esc(parsed.title)}</div>`;
+  }
+  if (parsed.artist) {
+    html += `<div class="tab-artist">${esc(parsed.artist)}</div>`;
+  }
+  const metaParts = [];
+  if (parsed.key) {
+    const transposedKey = transposeChord(parsed.key, semitones);
+    metaParts.push(`Key: ${esc(transposedKey)}`);
+  }
+  if (parsed.type) metaParts.push(esc(parsed.type));
+  if (metaParts.length) html += `<div class="tab-meta">${metaParts.join(' · ')}</div>`;
+
+  for (const line of parsed.lines) {
+    if (line.type === 'blank') {
+      html += '<span class="blank-line"></span>';
+    } else if (line.type === 'section') {
+      html += `<span class="section-label">${esc(line.text)}</span>\n`;
+    } else if (line.type === 'lyric') {
+      // Separate chord-only lines from mixed lines
+      const hasText = line.parts.some(p => p.text && p.text.trim());
+      const hasChord = line.parts.some(p => p.chord);
+
+      // Build chord row above lyric row
+      let chordStr = '';
+      let lyricStr = '';
+      let pos = 0;
+      for (const part of line.parts) {
+        if (part.chord) {
+          const ch = transposeChord(part.chord, semitones);
+          // Pad chord row to current lyric position
+          while (chordStr.length < pos) chordStr += ' ';
+          chordStr += ch;
+          // Ensure minimum spacing after chord
+          if (chordStr.length < pos + ch.length) pos = chordStr.length;
+        } else {
+          const txt = part.text || '';
+          lyricStr += txt;
+          pos += txt.length;
+        }
+      }
+      if (chordStr.trim()) {
+        html += `<span class="line-pair"><span class="chord-row">${esc(chordStr)}</span><span class="lyric-row">${esc(lyricStr) || '\u00a0'}</span></span>`;
+      } else {
+        html += `<span class="lyric-row">${esc(lyricStr)}</span>`;
+      }
+    }
+  }
+
+  return html;
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+// ── RENDER ──
+function render() {
+  if (!rawContent) return;
+  document.getElementById('tab-content').innerHTML = renderChordPro(rawContent, transpose);
+
+  // Update topbar
+  document.getElementById('title-display').textContent = songTitle || 'Tab Viewer';
+  document.getElementById('artist-display').textContent = songArtist || '';
+
+  // Transpose display
+  const tv = document.getElementById('transpose-val');
+  if (transpose === 0) tv.textContent = '0';
+  else if (transpose > 0) tv.textContent = '+' + transpose;
+  else tv.textContent = String(transpose);
+}
+
+// ── FILE OPEN ──
+document.getElementById('file-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    rawContent = ev.target.result;
+    transpose = 0;
+    document.getElementById('transpose-val').textContent = '0';
+    render();
+    document.getElementById('landing').style.display = 'none';
+    document.getElementById('viewer').style.display = 'block';
+    document.getElementById('controls').style.display = 'flex';
+    document.getElementById('viewer').scrollTop = 0;
+    stopScroll();
+  };
+  reader.readAsText(file, 'utf-8');
+  // Reset input so same file can be reopened
+  this.value = '';
+});
+
+// ── TRANSPOSE ──
+document.getElementById('transpose-up').addEventListener('click', () => {
+  transpose = ((transpose + 1 + 12) % 12);
+  if (transpose > 6) transpose -= 12;
+  render();
+});
+
+document.getElementById('transpose-down').addEventListener('click', () => {
+  transpose = ((transpose - 1 + 12) % 12);
+  if (transpose > 6) transpose -= 12;
+  render();
+});
+
+// ── FONT SIZE ──
+document.getElementById('font-up').addEventListener('click', () => {
+  fontSize = Math.min(fontSize + 1, 24);
+  document.getElementById('font-val').textContent = fontSize;
+  document.getElementById('tab-content').style.fontSize = fontSize + 'px';
+});
+
+document.getElementById('font-down').addEventListener('click', () => {
+  fontSize = Math.max(fontSize - 1, 10);
+  document.getElementById('font-val').textContent = fontSize;
+  document.getElementById('tab-content').style.fontSize = fontSize + 'px';
+});
+
+// ── AUTOSCROLL ──
+function stopScroll() {
+  scrolling = false;
+  clearInterval(scrollInterval);
+  scrollInterval = null;
+  document.getElementById('scroll-btn').textContent = '▶ Scroll';
+  document.getElementById('scroll-btn').classList.remove('active');
+}
+
+document.getElementById('scroll-btn').addEventListener('click', () => {
+  if (scrolling) {
+    stopScroll();
+  } else {
+    scrolling = true;
+    document.getElementById('scroll-btn').textContent = '⏹ Stop';
+    document.getElementById('scroll-btn').classList.add('active');
+    const viewer = document.getElementById('viewer');
+    scrollInterval = setInterval(() => {
+      const speed = parseInt(document.getElementById('scroll-speed').value);
+      viewer.scrollTop += speed * 0.4;
+      // Auto-stop at bottom
+      if (viewer.scrollTop + viewer.clientHeight >= viewer.scrollHeight - 2) {
+        stopScroll();
+      }
+    }, 30);
+  }
+});
+
+// Touch on viewer stops scroll
+document.getElementById('viewer').addEventListener('touchstart', () => {
+  if (scrolling) stopScroll();
+}, { passive: true });
+</script>
+</body>
+</html>
